@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interactive Teacher Demo V3</title>
+  <style>
+    :root{
+      --bg:#081326;
+      --glass:rgba(10,22,46,.30);
+      --glass-strong:rgba(10,22,46,.52);
+      --line:rgba(255,255,255,.12);
+      --text:#eef4ff;
+      --muted:#c3d1ee;
+      --accent:#8a7dff;
+      --accent2:#67dbff;
+      --dialog:#f7fbff;
+      --dialog-ink:#1f2d49;
+      --good:#36d37e;
+      --bad:#ff7389;
+      --shadow:0 20px 60px rgba(0,0,0,.30);
+    }
+
+    *{ box-sizing:border-box; }
+
+    body{
+      margin:0;
+      min-height:100vh;
+      overflow:hidden;
+      font-family:Arial, Helvetica, sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(138,125,255,.18), transparent 22%),
+        radial-gradient(circle at top right, rgba(103,219,255,.16), transparent 18%),
+        linear-gradient(180deg, #071121 0%, #0a1830 40%, #0c1d39 100%);
+    }
+
+    .app{
+      position:relative;
+      width:100%;
+      height:100vh;
+      overflow:hidden;
+    }
+
+    .scene{
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(to top, rgba(4,10,20,.54), rgba(4,10,20,.14)),
+        url('https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
+      transition:background-image .4s ease;
+      filter:saturate(1.05) brightness(.96);
+    }
+
+    .scene::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(circle at 22% 38%, rgba(255,255,255,.05), transparent 18%),
+        linear-gradient(to top, rgba(2,8,18,.38), transparent 42%);
+      pointer-events:none;
+    }
+
+    .topbar{
+      position:absolute;
+      top:14px;
+      left:14px;
+      right:14px;
+      z-index:50;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .meta,.controls{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+    }
+
+    .glass, button, select{
+      border:none;
+      outline:none;
+      border-radius:999px;
+      padding:10px 14px;
+      background:var(--glass);
+      color:var(--text);
+      border:1px solid var(--line);
+      backdrop-filter:blur(16px) saturate(1.15);
+      -webkit-backdrop-filter:blur(16px) saturate(1.15);
+      box-shadow:0 8px 24px rgba(0,0,0,.14);
+      font-size:14px;
+      font-weight:700;
+    }
+
+    button{
+      cursor:pointer;
+      transition:transform .16s ease, background .16s ease;
+    }
+
+    button:hover{
+      transform:translateY(-1px);
+      background:rgba(18,42,82,.42);
+    }
+
+    button.primary{
+      background:linear-gradient(135deg, var(--accent), var(--accent2));
+      color:#071326;
+      border:none;
+    }
+
+    select{ min-width:260px; }
+
+    .content{
+      position:absolute;
+      inset:90px 18px 170px 18px;
+      display:grid;
+      grid-template-columns: minmax(280px, 420px) 1fr;
+      gap:18px;
+      z-index:20;
+      align-items:end;
+    }
+
+    .teacher-card{
+      position:relative;
+      height:100%;
+      min-height:420px;
+      border-radius:34px;
+      background:linear-gradient(180deg, rgba(15,31,62,.56), rgba(8,21,44,.70));
+      border:1px solid rgba(255,255,255,.10);
+      backdrop-filter:blur(12px);
+      overflow:hidden;
+      box-shadow:var(--shadow);
+    }
+
+    .teacher-glow{
+      position:absolute;
+      inset:auto auto 14% 18%;
+      width:160px;
+      height:160px;
+      border-radius:50%;
+      background:radial-gradient(circle, rgba(138,125,255,.24), transparent 68%);
+      filter:blur(10px);
+      z-index:1;
+    }
+
+    .teacher-panel-header{
+      position:absolute;
+      top:16px;
+      left:16px;
+      right:16px;
+      z-index:4;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    }
+
+    .teacher-badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 14px;
+      border-radius:999px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.10);
+      font-size:13px;
+      font-weight:800;
+    }
+
+    .teacher-stage{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+      padding:24px 20px 0;
+      z-index:2;
+    }
+
+    .teacher-portrait-wrap{
+      position:relative;
+      width:min(92%, 360px);
+      height:92%;
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+      animation:portraitFloat 4s ease-in-out infinite;
+    }
+
+    @keyframes portraitFloat{
+      0%,100%{ transform:translateY(0); }
+      50%{ transform:translateY(-8px); }
+    }
+
+    .teacher-shadow{
+      position:absolute;
+      bottom:18px;
+      width:68%;
+      height:24px;
+      border-radius:50%;
+      background:rgba(0,0,0,.26);
+      filter:blur(10px);
+      z-index:1;
+    }
+
+    .teacher-portrait{
+      position:relative;
+      width:100%;
+      max-height:100%;
+      object-fit:contain;
+      z-index:2;
+      filter:drop-shadow(0 20px 28px rgba(0,0,0,.28));
+      border-radius:28px;
+    }
+
+    .teacher-face-ui{
+      position:absolute;
+      top:18%;
+      left:50%;
+      transform:translateX(-50%);
+      width:34%;
+      height:18%;
+      z-index:5;
+      pointer-events:none;
+    }
+
+    .eye{
+      position:absolute;
+      width:18%;
+      height:10%;
+      background:#fff;
+      border-radius:999px;
+      top:35%;
+      overflow:hidden;
+      transition:all .18s ease;
+      box-shadow:0 1px 0 rgba(0,0,0,.08) inset;
+    }
+
+    .eye.left{ left:21%; }
+    .eye.right{ right:21%; }
+
+    .eye::after{
+      content:"";
+      position:absolute;
+      width:50%;
+      aspect-ratio:1/1;
+      left:26%;
+      top:18%;
+      border-radius:50%;
+      background:radial-gradient(circle at 38% 35%, #fff5f7 0 16%, #c82744 18% 68%, #2b0914 72% 100%);
+    }
+
+    .eye.closed{
+      height:4%;
+      top:40%;
+      background:#4a2331;
+    }
+    .eye.closed::after{ display:none; }
+
+    .mouth{
+      position:absolute;
+      left:50%;
+      bottom:18%;
+      transform:translateX(-50%);
+      width:13%;
+      height:6%;
+      background:#c97786;
+      border-radius:0 0 999px 999px;
+      transition:all .16s ease;
+      opacity:.88;
+    }
+
+    .mouth.talk{
+      height:11%;
+      background:#b05b69;
+    }
+
+    .mouth.question{
+      width:9%;
+      height:11%;
+      border-radius:50%;
+      background:#9d5461;
+    }
+
+    .teacher-mode{
+      position:absolute;
+      left:18px;
+      bottom:16px;
+      z-index:4;
+      padding:10px 14px;
+      border-radius:16px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.10);
+      font-size:13px;
+      color:#dbe7ff;
+      font-weight:700;
+    }
+
+    .board-card{
+      position:relative;
+      min-height:420px;
+      border-radius:34px;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow:var(--shadow);
+      background:
+        linear-gradient(180deg, rgba(9,24,52,.28), rgba(8,20,44,.42));
+      backdrop-filter:blur(10px);
+    }
+
+    .board-top{
+      position:absolute;
+      top:16px;
+      left:16px;
+      right:16px;
+      z-index:4;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    }
+
+    .board-pill{
+      padding:10px 14px;
+      border-radius:999px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.10);
+      font-size:13px;
+      font-weight:800;
+    }
+
+    .board{
+      position:absolute;
+      inset:70px 18px 18px 18px;
+      border-radius:28px;
+      background:
+        linear-gradient(180deg, rgba(18,120,94,.10), rgba(8,80,66,.16)),
+        linear-gradient(180deg, #1b745c 0%, #17634f 100%);
+      border:10px solid #d2b48c;
+      box-shadow:
+        inset 0 0 0 2px rgba(255,255,255,.06),
+        inset 0 0 60px rgba(0,0,0,.12);
+      overflow:hidden;
+    }
+
+    .board::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(circle at 20% 18%, rgba(255,255,255,.08), transparent 16%),
+        radial-gradient(circle at 80% 28%, rgba(255,255,255,.06), transparent 14%),
+        linear-gradient(to bottom, transparent 96%, rgba(255,255,255,.08) 100%);
+      pointer-events:none;
+    }
+
+    .chalk-area{
+      position:absolute;
+      inset:26px 28px 24px 28px;
+      color:#eefbff;
+      text-shadow:0 2px 8px rgba(0,0,0,.18);
+      font-weight:800;
+      line-height:1.45;
+      white-space:pre-line;
+      font-size:clamp(20px, 2.3vw, 36px);
+      opacity:.96;
+    }
+
+    .chalk-writing{
+      display:inline-block;
+      min-height:60px;
+    }
+
+    .chalk-cursor{
+      display:inline-block;
+      width:10px;
+      height:1.1em;
+      background:#e5f7ff;
+      margin-left:6px;
+      transform:translateY(4px);
+      animation:blink .8s infinite;
+    }
+
+    @keyframes blink{
+      0%,45%{ opacity:1; }
+      46%,100%{ opacity:0; }
+    }
+
+    .question-mark{
+      position:absolute;
+      right:24px;
+      top:20px;
+      width:84px;
+      height:84px;
+      border-radius:50%;
+      display:grid;
+      place-items:center;
+      background:rgba(255,255,255,.14);
+      border:1px solid rgba(255,255,255,.16);
+      backdrop-filter:blur(10px);
+      color:#fff6b8;
+      font-size:52px;
+      font-weight:900;
+      opacity:0;
+      transform:translateY(8px) scale(.9);
+      transition:all .25s ease;
+      box-shadow:0 10px 28px rgba(0,0,0,.18);
+    }
+
+    .question-mark.show{
+      opacity:1;
+      transform:translateY(0) scale(1);
+      animation:qBob 1.4s ease-in-out infinite;
+    }
+
+    @keyframes qBob{
+      0%,100%{ transform:translateY(0) scale(1); }
+      50%{ transform:translateY(-4px) scale(1.03); }
+    }
+
+    .dialogue{
+      position:absolute;
+      left:16px;
+      right:16px;
+      bottom:16px;
+      z-index:70;
+      background:rgba(250,252,255,.96);
+      color:var(--dialog-ink);
+      border-radius:28px;
+      overflow:hidden;
+      box-shadow:var(--shadow);
+    }
+
+    .name-tag{
+      position:absolute;
+      top:-16px;
+      left:18px;
+      padding:13px 20px;
+      border-radius:18px 18px 8px 8px;
+      background:linear-gradient(135deg,#9d77ff,#6bb8ff);
+      color:#fff;
+      font-weight:800;
+      font-size:18px;
+      box-shadow:0 10px 20px rgba(86,96,255,.28);
+    }
+
+    .dialogue-inner{
+      padding:52px 22px 20px;
+      min-height:170px;
+      position:relative;
+    }
+
+    .subline{
+      color:#657495;
+      font-size:14px;
+      font-weight:700;
+      margin-bottom:12px;
+    }
+
+    .text{
+      font-size:clamp(21px, 2.1vw, 34px);
+      line-height:1.55;
+      min-height:84px;
+      padding-right:46px;
+    }
+
+    .next-indicator{
+      position:absolute;
+      right:16px;
+      bottom:16px;
+      width:38px;
+      height:38px;
+      border-radius:50%;
+      display:grid;
+      place-items:center;
+      font-size:26px;
+      font-weight:900;
+      color:#67a8ff;
+      background:rgba(103,168,255,.12);
+      opacity:0;
+      transition:opacity .2s ease;
+    }
+
+    .next-indicator.show{
+      opacity:1;
+      animation:bob 1s ease-in-out infinite;
+    }
+
+    @keyframes bob{
+      0%,100%{ transform:translateX(0); }
+      50%{ transform:translateX(4px); }
+    }
+
+    .quiz-overlay{
+      position:absolute;
+      inset:0;
+      z-index:90;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      background:rgba(3,8,20,.46);
+      backdrop-filter:blur(6px);
+    }
+
+    .quiz-overlay.show{ display:flex; }
+
+    .quiz-card{
+      width:min(760px, 100%);
+      background:rgba(8,22,48,.72);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:28px;
+      padding:22px;
+      backdrop-filter:blur(18px);
+      box-shadow:var(--shadow);
+    }
+
+    .quiz-badge{
+      display:inline-block;
+      padding:8px 12px;
+      border-radius:999px;
+      background:rgba(138,125,255,.18);
+      color:#dce5ff;
+      font-size:12px;
+      font-weight:800;
+      margin-bottom:12px;
+    }
+
+    .quiz-title{
+      margin:0 0 12px;
+      font-size:28px;
+    }
+
+    .quiz-question{
+      color:#eef4ff;
+      font-size:18px;
+      line-height:1.55;
+      margin-bottom:16px;
+    }
+
+    .quiz-options{
+      display:grid;
+      gap:12px;
+    }
+
+    .option{
+      width:100%;
+      text-align:left;
+      padding:15px 16px;
+      border-radius:16px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.08);
+      color:#eef4ff;
+      font-size:16px;
+      font-weight:700;
+    }
+
+    .option.correct{
+      background:rgba(54,211,126,.18);
+      border-color:rgba(54,211,126,.34);
+    }
+
+    .option.wrong{
+      background:rgba(255,115,137,.16);
+      border-color:rgba(255,115,137,.34);
+    }
+
+    .quiz-feedback{
+      margin-top:14px;
+      min-height:24px;
+      font-weight:700;
+    }
+
+    .quiz-feedback.good{ color:#95f0be; }
+    .quiz-feedback.bad{ color:#ffbcc8; }
+
+    .hidden-ui .topbar,
+    .hidden-ui .dialogue{
+      opacity:0;
+      pointer-events:none;
+    }
+
+    @media (max-width: 980px){
+      .content{
+        grid-template-columns: 320px 1fr;
+      }
+    }
+
+    @media (max-width: 760px){
+      .topbar{
+        top:10px;
+        left:10px;
+        right:10px;
+      }
+
+      .meta,.controls{
+        width:100%;
+        justify-content:center;
+      }
+
+      select{
+        min-width:180px;
+        max-width:100%;
+      }
+
+      .glass,button,select{
+        padding:9px 12px;
+        font-size:13px;
+      }
+
+      .content{
+        inset:112px 10px 190px 10px;
+        grid-template-columns: 1fr;
+        gap:12px;
+      }
+
+      .teacher-card{
+        min-height:240px;
+      }
+
+      .teacher-stage{
+        justify-content:flex-start;
+        padding-left:8px;
+      }
+
+      .teacher-portrait-wrap{
+        width:210px;
+      }
+
+      .teacher-face-ui{
+        width:74px;
+        height:54px;
+        top:52px;
+        left:104px;
+      }
+
+      .board-card{
+        min-height:300px;
+      }
+
+      .board{
+        inset:62px 10px 10px 10px;
+        border-width:8px;
+      }
+
+      .chalk-area{
+        inset:18px 18px 18px 18px;
+        font-size:18px;
+      }
+
+      .question-mark{
+        width:64px;
+        height:64px;
+        font-size:40px;
+        top:14px;
+        right:14px;
+      }
+
+      .dialogue{
+        left:10px;
+        right:10px;
+        bottom:10px;
+        border-radius:22px;
+      }
+
+      .dialogue-inner{
+        padding:48px 16px 18px;
+        min-height:164px;
+      }
+
+      .name-tag{
+        left:14px;
+        top:-15px;
+        padding:11px 16px;
+        font-size:15px;
+      }
+
+      .subline{
+        font-size:12px;
+      }
+
+      .text{
+        font-size:clamp(18px, 5vw, 24px);
+      }
+
+      .quiz-title{
+        font-size:22px;
+      }
+
+      .quiz-question,.option{
+        font-size:15px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <div class="scene" id="scene"></div>
+
+    <div class="topbar">
+      <div class="meta">
+        <div class="glass" id="lessonTitle">Interactive Teacher Demo</div>
+        <div class="glass" id="lessonStep">Line 1 / 10</div>
+      </div>
+
+      <div class="controls">
+        <select id="voiceSelect"></select>
+        <button id="voiceBtn">Voice On</button>
+        <button id="autoBtn">Auto</button>
+        <button id="hideBtn">Hide UI</button>
+        <button id="prevBtn">Back</button>
+        <button class="primary" id="nextBtn">Next</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <section class="teacher-card">
+        <div class="teacher-glow"></div>
+
+        <div class="teacher-panel-header">
+          <div class="teacher-badge">Teacher Character</div>
+          <div class="teacher-badge" id="teacherState">Explaining</div>
+        </div>
+
+        <div class="teacher-stage">
+          <div class="teacher-portrait-wrap">
+            <div class="teacher-shadow"></div>
+
+            <img
+              class="teacher-portrait"
+              id="teacherPortrait"
+              alt="Teacher portrait"
+              src="https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=900&q=80"
+            />
+
+            <div class="teacher-face-ui">
+              <div class="eye left" id="eyeLeft"></div>
+              <div class="eye right" id="eyeRight"></div>
+              <div class="mouth" id="mouth"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="teacher-mode" id="teacherMode">Mode: Talk</div>
+      </section>
+
+      <section class="board-card">
+        <div class="board-top">
+          <div class="board-pill">Smart Board</div>
+          <div class="board-pill" id="boardTopic">Chapter 6</div>
+        </div>
+
+        <div class="board">
+          <div class="question-mark" id="questionMark">?</div>
+          <div class="chalk-area">
+            <div class="chalk-writing" id="boardWriting"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="dialogue" id="dialoguePanel">
+      <div class="name-tag" id="speakerName">Ruka</div>
+      <div class="dialogue-inner">
+        <div class="subline" id="speakerRole">Teacher • Paper 2 • Chapter 6</div>
+        <div class="text" id="dialogueText"></div>
+        <div class="next-indicator" id="nextIndicator">›</div>
+      </div>
+    </div>
+
+    <div class="quiz-overlay" id="quizOverlay">
+      <div class="quiz-card">
+        <div class="quiz-badge">Interactive Question</div>
+        <h2 class="quiz-title" id="quizTitle">Question</h2>
+        <div class="quiz-question" id="quizQuestion"></div>
+        <div class="quiz-options" id="quizOptions"></div>
+        <div class="quiz-feedback" id="quizFeedback"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const lessonData = [
+      {
+        speaker: "Ruka",
+        role: "Teacher • Paper 2 • Chapter 6",
+        portrait: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=900&q=80",
+        expression: "talk",
+        mode: "talk",
+        state: "Explaining",
+        bg: "classroom",
+        boardTopic: "Chapter 6",
+        boardText: "",
+        text: "Today we will learn database relationships in a more polished interactive class."
+      },
+      {
+        speaker: "Ruka",
+        role: "Teacher • Paper 2 • Chapter 6",
+        portrait: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=900&q=80",
+        expression: "talk",
+        mode: "write",
+        state: "Writing",
+        bg: "classroom",
+        boardTopic: "Chapter 6",
+        boardText: "Database Relationships",
+        text: "A relationship connects data between tables inside a database."
+      },
+      {
+        speaker: "Ruka",
+        role: "Teacher • Paper 2 • Chapter 6",
+        portrait: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=900&q=80",
+        expression: "normal",
+        mode: "write",
+        state: "Writing",
+        bg: "classroom",
+        boardTopic: "One-to-One",
+        boardText: "One-to-One\n1 record ↔ 1 record",
+        text: "One-to-one means one record matches exactly one record in another table."
+      },
+      {
+        speaker: "Ruka",
+        role: "Teacher • Paper 2 • Chapter 6",
+        portrait: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=900&q=80",
+        expression: "talk",
+        mode: "write",
+        state: "Writing",
+        bg: "classroom",
+        boardTopic: "One-to-Many",
+        boardText: "One-to-Many\n1 class → many students",
+        text: "One-to-many means one record can link to many records in another table."
+      },
+      {
+        speaker: "Ruka",
+        role: "Teacher • Paper 2 • Chapter 6",
+        portrait: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=900&q=80",
+        expression: "smile",
+        mode: "talk",
+        state: "Explaining",
+        bg: "classroom",
+        boardTopic: "Example",
+        boardText: "Example:\n1 class → many students",
+        text: "For example, one class can have many students."
+      },
+      {
+        speaker: "Ruka",
+        role: "Teacher • Paper 2 • Chapter 6",
+        portrait: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=900&q=80",
+        expression: "talk",
+        mode: "write",
+        state: "Writing",
+        bg: "lab",
+        boardTopic: "Many-to-Many",
+        boardText: "Many-to-Many\nstudents ↔ clubs",
+        text: "Many-to-many means many records in one table can connect to many records in another."
+      },
+      {
+        speaker: "Ruka",
+        role: "Teacher • Paper 2 • Chapter 6",
+        portrait: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=900&q=80",
+        expression: "normal",
+        mode: "write",
+        state: "Writing",
+        bg: "lab",
+        boardTopic: "Solution",
+        boardText: "Use a linking table",
+        text: "This type is often solved using a linking table between the two main tables."
+      },
+      {
+        speaker: "Ruka",
+        role: "Teacher • Paper 2 • Chapter 6",
+        portrait: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=900&q=80",
+        expression: "smile",
+        mode: "talk",
+        state: "Explaining",
+        bg: "lab",
+        boardTopic: "Example",
+        boardText: "students ↔ clubs",
+        text: "A good example is students and clubs, because one student can join many clubs."
+      },
+      {
+        speaker: "Ruka",
+        role: "Teacher • Paper 2 • Chapter 6",
+        portrait: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=900&q=80",
+        expression: "talk",
+        mode: "talk",
+        state: "Explaining",
+        bg: "lab",
+        boardTopic: "Example",
+        boardText: "1 club ↔ many students",
+        text: "And one club can also contain many students."
+      },
+      {
+        speaker: "Ruka",
+        role: "Teacher • Paper 2 • Chapter 6",
+        portrait: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=900&q=80",
+        expression: "question",
+        mode: "question",
+        state: "Question Time",
+        bg: "lab",
+        boardTopic: "Quick Check",
+        boardText: "Review the lesson",
+        text: "Now let us check what you learned with a question."
+      }
+    ];
+
+    const quizBlocks = [
+      {
+        afterLine: 5,
+        title: "Question 1",
+        question: "Which relationship is shown when one class has many students?",
+        options: ["One-to-one", "One-to-many", "Many-to-many", "No relationship"],
+        correct: 1
+      },
+      {
+        afterLine: 10,
+        title: "Question 2",
+        question: "Which example best matches a many-to-many relationship?",
+        options: [
+          "One student with one ID card only",
+          "One class with one teacher",
+          "Students and clubs",
+          "One room with one computer"
+        ],
+        correct: 2
+      }
+    ];
+
+    const sceneMap = {
+      classroom:
+        "linear-gradient(to top, rgba(4,10,20,.54), rgba(4,10,20,.14)), url('https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat",
+      lab:
+        "linear-gradient(to top, rgba(4,10,20,.54), rgba(4,10,20,.14)), url('https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat"
+    };
+
+    let currentIndex = 0;
+    let typingTimer = null;
+    let autoTimer = null;
+    let boardTimer = null;
+    let typingDone = false;
+    let autoMode = false;
+    let voiceEnabled = true;
+    let quizOpen = false;
+    let voices = [];
+
+    const scene = document.getElementById("scene");
+    const lessonTitle = document.getElementById("lessonTitle");
+    const lessonStep = document.getElementById("lessonStep");
+    const voiceSelect = document.getElementById("voiceSelect");
+    const voiceBtn = document.getElementById("voiceBtn");
+    const autoBtn = document.getElementById("autoBtn");
+    const hideBtn = document.getElementById("hideBtn");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+
+    const teacherPortrait = document.getElementById("teacherPortrait");
+    const teacherState = document.getElementById("teacherState");
+    const teacherMode = document.getElementById("teacherMode");
+    const eyeLeft = document.getElementById("eyeLeft");
+    const eyeRight = document.getElementById("eyeRight");
+    const mouth = document.getElementById("mouth");
+
+    const boardTopic = document.getElementById("boardTopic");
+    const boardWriting = document.getElementById("boardWriting");
+    const questionMark = document.getElementById("questionMark");
+
+    const speakerName = document.getElementById("speakerName");
+    const speakerRole = document.getElementById("speakerRole");
+    const dialogueText = document.getElementById("dialogueText");
+    const nextIndicator = document.getElementById("nextIndicator");
+
+    const quizOverlay = document.getElementById("quizOverlay");
+    const quizTitle = document.getElementById("quizTitle");
+    const quizQuestion = document.getElementById("quizQuestion");
+    const quizOptions = document.getElementById("quizOptions");
+    const quizFeedback = document.getElementById("quizFeedback");
+
+    function loadVoices() {
+      if (!("speechSynthesis" in window)) return;
+      voices = speechSynthesis.getVoices();
+      voiceSelect.innerHTML = "";
+      const preferred = voices.filter(v => /en/i.test(v.lang) || /english/i.test(v.name));
+      const list = preferred.length ? preferred : voices;
+
+      list.forEach((voice, i) => {
+        const opt = document.createElement("option");
+        opt.value = voice.name;
+        opt.textContent = `${voice.name} (${voice.lang})`;
+        if (i === 0) opt.selected = true;
+        voiceSelect.appendChild(opt);
+      });
+    }
+
+    if ("speechSynthesis" in window) {
+      speechSynthesis.onvoiceschanged = loadVoices;
+      loadVoices();
+    }
+
+    function setExpression(type) {
+      eyeLeft.className = "eye left";
+      eyeRight.className = "eye right";
+      mouth.className = "mouth";
+
+      if (type === "talk") {
+        mouth.classList.add("talk");
+      } else if (type === "smile") {
+        // default soft smile
+      } else if (type === "question") {
+        mouth.classList.add("question");
+      }
+    }
+
+    function blinkNow() {
+      if (quizOpen) return;
+      eyeLeft.classList.add("closed");
+      eyeRight.classList.add("closed");
+      setTimeout(() => {
+        const row = lessonData[currentIndex];
+        if (row) setExpression(row.expression);
+      }, 140);
+    }
+    setInterval(blinkNow, 3200);
+
+    function clearTimers() {
+      clearInterval(typingTimer);
+      clearTimeout(autoTimer);
+      clearInterval(boardTimer);
+    }
+
+    function typeDialogue(text, speed) {
+      dialogueText.innerHTML = "";
+      let i = 0;
+      typingTimer = setInterval(() => {
+        if (i < text.length) {
+          const safe = text.slice(0, i + 1)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+          dialogueText.innerHTML = safe + '<span class="chalk-cursor"></span>';
+          i++;
+        } else {
+          clearInterval(typingTimer);
+          dialogueText.textContent = text;
+          typingDone = true;
+          nextIndicator.classList.add("show");
+
+          const quiz = getQuizForLine(currentIndex + 1);
+          if (quiz) {
+            setTimeout(() => showQuiz(quiz), 650);
+          } else if (autoMode) {
+            autoTimer = setTimeout(goNext, 1700);
+          }
+        }
+      }, speed);
+    }
+
+    function typeBoardText(text, speed) {
+      clearInterval(boardTimer);
+      boardWriting.innerHTML = "";
+      questionMark.classList.remove("show");
+
+      if (!text) return;
+
+      let i = 0;
+      boardTimer = setInterval(() => {
+        if (i < text.length) {
+          const safe = text.slice(0, i + 1)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\n/g, "<br>");
+          boardWriting.innerHTML = safe + '<span class="chalk-cursor"></span>';
+          i++;
+        } else {
+          clearInterval(boardTimer);
+          boardWriting.innerHTML = text.replace(/\n/g, "<br>");
+        }
+      }, speed);
+    }
+
+    function speakText(text, expression) {
+      if (!voiceEnabled || !("speechSynthesis" in window)) return;
+
+      speechSynthesis.cancel();
+
+      const utter = new SpeechSynthesisUtterance(text);
+      const selected = voices.find(v => v.name === voiceSelect.value);
+      if (selected) utter.voice = selected;
+
+      utter.rate = 0.98;
+      utter.pitch = expression === "question" ? 1.16 : expression === "smile" ? 1.08 : 1.0;
+      utter.volume = 1;
+
+      utter.onstart = () => animateTalking(true);
+      utter.onend = () => animateTalking(false);
+      utter.onerror = () => animateTalking(false);
+
+      speechSynthesis.speak(utter);
+    }
+
+    let talkInterval = null;
+    function animateTalking(start) {
+      clearInterval(talkInterval);
+
+      if (!start) {
+        const row = lessonData[currentIndex];
+        if (row) setExpression(row.expression);
+        return;
+      }
+
+      talkInterval = setInterval(() => {
+        mouth.classList.toggle("talk");
+      }, 180);
+    }
+
+    function renderLine() {
+      clearTimers();
+      typingDone = false;
+      nextIndicator.classList.remove("show");
+      if ("speechSynthesis" in window) speechSynthesis.cancel();
+
+      const row = lessonData[currentIndex];
+
+      scene.style.background = sceneMap[row.bg] || sceneMap.classroom;
+      teacherPortrait.src = row.portrait;
+      teacherState.textContent = row.state;
+      teacherMode.textContent = "Mode: " + row.mode.charAt(0).toUpperCase() + row.mode.slice(1);
+      boardTopic.textContent = row.boardTopic;
+
+      lessonTitle.textContent = "Interactive Teacher Demo";
+      lessonStep.textContent = `Line ${currentIndex + 1} / ${lessonData.length}`;
+
+      speakerName.textContent = row.speaker;
+      speakerRole.textContent = row.role;
+
+      setExpression(row.expression);
+
+      if (row.mode === "question") {
+        boardWriting.innerHTML = row.boardText.replace(/\n/g, "<br>");
+        questionMark.classList.add("show");
+      } else if (row.mode === "write") {
+        typeBoardText(row.boardText, 18);
+      } else {
+        boardWriting.innerHTML = row.boardText ? row.boardText.replace(/\n/g, "<br>") : "";
+        questionMark.classList.remove("show");
+      }
+
+      typeDialogue(row.text, 20);
+      speakText(row.text, row.expression);
+    }
+
+    function finishTypingNow() {
+      clearInterval(typingTimer);
+      const row = lessonData[currentIndex];
+      dialogueText.textContent = row.text;
+      typingDone = true;
+      nextIndicator.classList.add("show");
+
+      const quiz = getQuizForLine(currentIndex + 1);
+      if (quiz) {
+        setTimeout(() => showQuiz(quiz), 450);
+      } else if (autoMode) {
+        autoTimer = setTimeout(goNext, 1700);
+      }
+    }
+
+    function getQuizForLine(lineNumber) {
+      return quizBlocks.find(q => q.afterLine === lineNumber);
+    }
+
+    function showQuiz(quiz) {
+      quizOpen = true;
+      questionMark.classList.add("show");
+
+      quizTitle.textContent = quiz.title;
+      quizQuestion.textContent = quiz.question;
+      quizFeedback.textContent = "";
+      quizFeedback.className = "quiz-feedback";
+      quizOptions.innerHTML = "";
+
+      quiz.options.forEach((opt, index) => {
+        const btn = document.createElement("button");
+        btn.className = "option";
+        btn.textContent = opt;
+        btn.onclick = () => answerQuiz(btn, quiz, index);
+        quizOptions.appendChild(btn);
+      });
+
+      quizOverlay.classList.add("show");
+    }
+
+    function answerQuiz(button, quiz, selectedIndex) {
+      const all = [...quizOptions.querySelectorAll(".option")];
+      all.forEach(b => b.disabled = true);
+
+      if (selectedIndex === quiz.correct) {
+        button.classList.add("correct");
+        quizFeedback.textContent = "Correct. Great job.";
+        quizFeedback.classList.add("good");
+      } else {
+        button.classList.add("wrong");
+        all[quiz.correct].classList.add("correct");
+        quizFeedback.textContent = "Not correct. Review the highlighted answer.";
+        quizFeedback.classList.add("bad");
+      }
+
+      setTimeout(() => {
+        quizOverlay.classList.remove("show");
+        quizOpen = false;
+        questionMark.classList.remove("show");
+
+        if (currentIndex < lessonData.length - 1) {
+          currentIndex++;
+          renderLine();
+        }
+      }, 1400);
+    }
+
+    function goNext() {
+      if (quizOpen) return;
+
+      if (!typingDone) {
+        finishTypingNow();
+        return;
+      }
+
+      if (getQuizForLine(currentIndex + 1)) return;
+
+      if (currentIndex < lessonData.length - 1) {
+        currentIndex++;
+        renderLine();
+      } else {
+        dialogueText.textContent = "End of improved demo. In your real version, this can open quiz, PDF, tracker, or practice.";
+        nextIndicator.classList.remove("show");
+      }
+    }
+
+    function goPrev() {
+      if (quizOpen) return;
+      if (currentIndex > 0) {
+        currentIndex--;
+        renderLine();
+      }
+    }
+
+    function toggleVoice() {
+      voiceEnabled = !voiceEnabled;
+      voiceBtn.textContent = voiceEnabled ? "Voice On" : "Voice Off";
+      if (!voiceEnabled && "speechSynthesis" in window) {
+        speechSynthesis.cancel();
+      } else {
+        const row = lessonData[currentIndex];
+        if (row) speakText(row.text, row.expression);
+      }
+    }
+
+    function toggleAuto() {
+      autoMode = !autoMode;
+      autoBtn.textContent = autoMode ? "Auto On" : "Auto";
+      autoBtn.classList.toggle("primary", autoMode);
+
+      if (!autoMode) {
+        clearTimeout(autoTimer);
+      } else if (typingDone && !quizOpen && !getQuizForLine(currentIndex + 1)) {
+        autoTimer = setTimeout(goNext, 1700);
+      }
+    }
+
+    function toggleHide() {
+      document.getElementById("app").classList.toggle("hidden-ui");
+      hideBtn.textContent =
+        document.getElementById("app").classList.contains("hidden-ui") ? "Show UI" : "Hide UI";
+    }
+
+    nextBtn.addEventListener("click", goNext);
+    prevBtn.addEventListener("click", goPrev);
+    voiceBtn.addEventListener("click", toggleVoice);
+    autoBtn.addEventListener("click", toggleAuto);
+    hideBtn.addEventListener("click", toggleHide);
+    document.getElementById("dialoguePanel").addEventListener("click", goNext);
+
+    document.addEventListener("keydown", (e) => {
+      if (quizOpen) return;
+      if (e.key === " " || e.key === "Enter" || e.key === "ArrowRight") {
+        e.preventDefault();
+        goNext();
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        goPrev();
+      }
+    });
+
+    renderLine();
+  </script>
+</body>
+</html>
